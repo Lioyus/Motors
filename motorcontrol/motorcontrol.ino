@@ -1,0 +1,141 @@
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <WiFiClientSecure.h>
+#include <ArduinoJson.h>
+
+// Configuration WiFi & Serveur
+const char* ssid = "VOTRE_SSID";
+const char* password = "VOTRE_PASSWORD";
+
+// Local (serveur Node local): "http://192.168.1.10:3000"
+// Render (production):        "https://vending1.onrender.com"
+const char* serverUrl = "https://vending1.onrender.com"; // REMPLACER PAR L'URL FINALE
+
+// Pins L298N
+const int ENA = 14; 
+const int IN1 = 26;
+const int IN2 = 27;
+
+// Configuration PWM pour ESP32
+const int freq = 5000;
+const int ledChannel = 0;
+const int resolution = 8;
+
+bool beginHttpClient(HTTPClient& http, WiFiClientSecure& secureClient, const String& url) {
+  if (url.startsWith("https://")) {
+    secureClient.setInsecure();
+    return http.begin(secureClient, url);
+  }
+
+  return http.begin(url);
+}
+
+void ensureWifi() {
+  if (WiFi.status() == WL_CONNECTED) {
+    return;
+  }
+
+  Serial.println("Reconnexion WiFi...");
+  WiFi.disconnect();
+  WiFi.begin(ssid, password);
+
+  unsigned long start = millis();
+  while (WiFi.status() != WL_CONNECTED && millis() - start < 15000) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("\nWiFi reconnecte");
+  } else {
+    Serial.println("\nEchec reconnexion WiFi");
+  }
+}
+
+void setup() {
+  Serial.begin(115200);
+  
+  pinMode(IN1, OUTPUT);
+  pinMode(IN2, OUTPUT);
+  
+  // Setup PWM
+  ledcSetup(ledChannel, freq, resolution);
+  ledcAttachPin(ENA, ledChannel);
+
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
+  Serial.println("\nWiFi OK !");
+  Serial.println(serverUrl);
+}
+
+void notifierFin() {
+  HTTPClient http;
+  WiFiClientSecure secureClient;
+  if (!beginHttpClient(http, secureClient, String(serverUrl) + "/fini")) {
+    Serial.println("Impossible d'ouvrir la connexion vers /fini");
+    return;
+  }
+  http.addHeader("Content-Type", "application/json");
+  int httpResponseCode = http.POST("{}"); // Signale la fin au serveur
+  if (httpResponseCode <= 0) {
+    Serial.printf("Erreur POST /fini: %s\n", http.errorToString(httpResponseCode).c_str());
+  }
+  http.end();
+}
+
+void runMotor(int ms_par_tour, int nbr, int speed) {
+  long tempsTotal = (long)ms_par_tour * nbr;
+  Serial.printf("Rotation pour %d tours (%ld ms)\n", nbr, tempsTotal);
+
+  digitalWrite(IN1, HIGH);
+  digitalWrite(IN2, LOW);
+  ledcWrite(ledChannel, speed);
+  
+  delay(tempsTotal); 
+  
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, LOW);
+  ledcWrite(ledChannel, 0);
+
+  notifierFin(); // Libère l'interface web
+}
+
+void loop() {
+  ensureWifi();
+
+  if (WiFi.status() == WL_CONNECTED) {
+    HTTPClient http;
+    WiFiClientSecure secureClient;
+    if (!beginHttpClient(http, secureClient, String(serverUrl) + "/commande.json")) {
+      Serial.println("Impossible d'ouvrir la connexion vers /commande.json");
+      delay(1000);
+      return;
+    }
+    
+    int httpCode = http.GET();
+    if (httpCode == 200) {
+      StaticJsonDocument<200> doc;
+      DeserializationError error = deserializeJson(doc, http.getStream());
+
+      if (error) {
+        Serial.printf("JSON invalide: %s\n", error.c_str());
+        http.end();
+        delay(1000);
+        return;
+      }
+
+      const char* action = doc["action"];
+      if (action && strcmp(action, "run") == 0) {
+        int ms = doc["ms_par_tour"];
+        int n = doc["nbr"];
+        runMotor(ms, n, 255);
+      }
+    } else if (httpCode > 0) {
+      Serial.printf("Erreur GET /commande.json: %d\n", httpCode);
+    } else {
+      Serial.printf("Connexion echouee: %s\n", http.errorToString(httpCode).c_str());
+    }
+    http.end();
+  }
+  delay(1000); // Vérifie le serveur toutes les secondes
+}
