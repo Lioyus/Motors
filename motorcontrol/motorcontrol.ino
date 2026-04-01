@@ -1,5 +1,6 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
+#include <WiFiClient.h>
 #include <WiFiClientSecure.h>
 #include <ArduinoJson.h>
 
@@ -7,9 +8,12 @@
 const char* ssid = "VOTRE_SSID";
 const char* password = "VOTRE_PASSWORD";
 
-// Local (serveur Node local): "http://192.168.1.10:3000"
-// Render (production):        "https://vending1.onrender.com"
-const char* serverUrl = "https://vending1.onrender.com"; // REMPLACER PAR L'URL FINALE
+const bool useProductionServer = false;
+
+// Local: utiliser l'IP LAN du PC, jamais "localhost" ni "127.0.0.1"
+const char* localServerUrl = "http://192.168.1.10:3000";
+const char* productionServerUrl = "https://vending1.onrender.com";
+const char* serverUrl = useProductionServer ? productionServerUrl : localServerUrl;
 
 // Pins L298N
 const int ENA = 14; 
@@ -21,13 +25,13 @@ const int freq = 5000;
 const int ledChannel = 0;
 const int resolution = 8;
 
-bool beginHttpClient(HTTPClient& http, WiFiClientSecure& secureClient, const String& url) {
+bool beginHttpClient(HTTPClient& http, WiFiClient& client, WiFiClientSecure& secureClient, const String& url) {
   if (url.startsWith("https://")) {
     secureClient.setInsecure();
     return http.begin(secureClient, url);
   }
 
-  return http.begin(url);
+  return http.begin(client, url);
 }
 
 void ensureWifi() {
@@ -70,8 +74,9 @@ void setup() {
 
 void notifierFin() {
   HTTPClient http;
+  WiFiClient client;
   WiFiClientSecure secureClient;
-  if (!beginHttpClient(http, secureClient, String(serverUrl) + "/fini")) {
+  if (!beginHttpClient(http, client, secureClient, String(serverUrl) + "/fini")) {
     Serial.println("Impossible d'ouvrir la connexion vers /fini");
     return;
   }
@@ -105,8 +110,9 @@ void loop() {
 
   if (WiFi.status() == WL_CONNECTED) {
     HTTPClient http;
+    WiFiClient client;
     WiFiClientSecure secureClient;
-    if (!beginHttpClient(http, secureClient, String(serverUrl) + "/commande.json")) {
+    if (!beginHttpClient(http, client, secureClient, String(serverUrl) + "/commande.json")) {
       Serial.println("Impossible d'ouvrir la connexion vers /commande.json");
       delay(1000);
       return;

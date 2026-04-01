@@ -8,7 +8,7 @@ const port = isProduction
     : 3000;
 const host = isProduction
     ? (process.env.HOST || '0.0.0.0')
-    : '127.0.0.1';
+    : '0.0.0.0';
 const publicDir = __dirname;
 const publicUrl = isProduction
     ? (process.env.PUBLIC_HOST || (host === '0.0.0.0' ? 'localhost' : host))
