@@ -13,6 +13,27 @@ const publicDir = __dirname;
 const publicUrl = isProduction
     ? (process.env.PUBLIC_HOST || (host === '0.0.0.0' ? 'localhost' : host))
     : 'localhost';
+const MOTOR_COUNT = 3;
+
+function createMotorState(id) {
+    return {
+        id,
+        action: 'idle',
+        ms_par_tour: 2000,
+        nbr: 1
+    };
+}
+
+const motorStates = Array.from({ length: MOTOR_COUNT }, (_, index) => createMotorState(index + 1));
+
+function getMotorState(motorId) {
+    return motorStates.find((motor) => motor.id === motorId);
+}
+
+function parseMotorId(value) {
+    const motorId = Number.parseInt(value, 10);
+    return Number.isInteger(motorId) ? motorId : null;
+}
 
 app.set('trust proxy', true);
 
@@ -31,48 +52,53 @@ app.get('/', (req, res) => {
 app.get('/healthz', (req, res) => {
     res.status(200).json({
         status: 'ok',
-        environment: isProduction ? 'production' : 'local'
+        environment: isProduction ? 'production' : 'local',
+        motors: motorStates
     });
 });
 
-// État initial
-let motorStatus = {
-    action: "idle",
-    ms_par_tour: 2000,
-    nbr: 1
-};
-
-// L'ESP32 appelle cette route pour savoir quoi faire
 app.get('/commande.json', (req, res) => {
-    res.json(motorStatus);
+    res.json({ motors: motorStates });
 });
 
-// L'interface Web appelle cette route quand on clique sur le bouton
 app.post('/lancer', (req, res) => {
+    const motorId = parseMotorId(req.body.motorId);
     const requestedTurns = Number.parseInt(req.body.nbr, 10);
     const nbr = Number.isInteger(requestedTurns) ? requestedTurns : 1;
+    const motor = getMotorState(motorId);
+
+    if (!motor) {
+        return res.status(400).json({ error: 'Moteur invalide' });
+    }
 
     if (nbr < 1 || nbr > 8) {
-        return res.status(400).json({ error: "Le nombre de tours doit etre compris entre 1 et 8" });
+        return res.status(400).json({ error: 'Le nombre de tours doit etre compris entre 1 et 8' });
     }
 
-    if (motorStatus.action === "idle") {
-        motorStatus.action = "run";
-        motorStatus.nbr = nbr;
-        res.json({ success: true });
-    } else {
-        res.status(400).json({ error: "Moteur déjà en cours" });
+    if (motor.action !== 'idle') {
+        return res.status(400).json({ error: `Le moteur ${motorId} est deja en cours` });
     }
+
+    motor.action = 'run';
+    motor.nbr = nbr;
+
+    res.json({ success: true, motor: motorId });
 });
 
-// L'ESP32 appelle cette route quand il a fini le travail
 app.post('/fini', (req, res) => {
-    motorStatus.action = "idle";
-    console.log("Rotation terminée, interface déverrouillée.");
-    res.json({ status: "ok" });
+    const motorId = parseMotorId(req.body.motorId);
+    const motor = getMotorState(motorId);
+
+    if (!motor) {
+        return res.status(400).json({ error: 'Moteur invalide' });
+    }
+
+    motor.action = 'idle';
+    console.log(`Rotation terminee pour le moteur ${motorId}.`);
+    res.json({ status: 'ok', motor: motorId });
 });
 
 app.listen(port, host, () => {
-    console.log(`Serveur lancé sur http://${publicUrl}:${port}`);
+    console.log(`Serveur lance sur http://${publicUrl}:${port}`);
     console.log(`Mode: ${isProduction ? 'production' : 'local'}`);
 });

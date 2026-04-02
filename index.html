@@ -3,110 +3,283 @@
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta charset="UTF-8">
-    <title>Contrôle Moteur ESP32</title>
+    <title>Controle de 3 Moteurs ESP32</title>
     <style>
-        body { font-family: sans-serif; text-align: center; padding-top: 50px; }
-        #progress-container { width: 80%; background: #ddd; margin: 20px auto; display: none; border-radius: 10px; overflow: hidden; }
-        #progress-bar { width: 0%; height: 20px; background: #4CAF50; transition: width 0.1s linear; }
-        button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
-        button:disabled { cursor: not-allowed; background: #ccc; }
-        input { padding: 8px; width: 60px; margin-bottom: 10px; }
-        .motor { display: inline-block; padding: 20px; border: 1px solid #ccc; border-radius: 10px; background: #ccc; }
+        :root {
+            --bg: #f5f1e8;
+            --panel: #fffaf0;
+            --line: #cdbda7;
+            --text: #2f2419;
+            --accent: #b85c38;
+            --accent-soft: #e8b58e;
+            --ok: #4f772d;
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Georgia, serif;
+            color: var(--text);
+            background:
+                radial-gradient(circle at top, rgba(232, 181, 142, 0.35), transparent 30%),
+                linear-gradient(180deg, #f7f2ea 0%, var(--bg) 100%);
+            min-height: 100vh;
+            padding: 32px 20px 48px;
+        }
+
+        .page {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            text-align: center;
+            margin: 0 0 28px;
+        }
+
+        .motors {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+        }
+
+        .motor {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            padding: 20px;
+            box-shadow: 0 14px 30px rgba(77, 52, 27, 0.08);
+        }
+
+        .motor h2 {
+            margin-top: 0;
+        }
+
+        .field {
+            margin-bottom: 14px;
+        }
+
+        label,
+        .status {
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid var(--line);
+            font-size: 15px;
+        }
+
+        button {
+            width: 100%;
+            border: 0;
+            border-radius: 999px;
+            padding: 12px 16px;
+            background: var(--accent);
+            color: #fff;
+            cursor: pointer;
+            font-size: 15px;
+        }
+
+        button:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .progress-container {
+            width: 100%;
+            background: #eadfce;
+            margin: 16px 0 12px;
+            display: none;
+            border-radius: 999px;
+            overflow: hidden;
+            height: 16px;
+        }
+
+        .progress-bar {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--accent-soft));
+            transition: width 0.1s linear;
+        }
+
+        .status strong {
+            color: var(--ok);
+        }
     </style>
 </head>
 <body>
-    <div class="motor">
-        <h1>Contrôle du Moteur</h1>
-    
-        <div>
-            <label for="nbr">Nombre de tours : </label>
-            <input type="number" id="nbr" value="1" min="1" max="8">
-        </div>
+    <main class="page">
+        <h1>Controle de 3 Moteurs</h1>
+        <p class="subtitle">Chaque moteur garde sa propre commande, son propre etat et sa propre progression.</p>
 
-        <button id="btnRun" onclick="lancerMoteur()">Lancer la rotation</button>
+        <section class="motors">
+            <article class="motor" data-motor-id="1">
+                <h2>Moteur 1</h2>
+                <div class="field">
+                    <label for="nbr-1">Nombre de tours</label>
+                    <input type="number" id="nbr-1" min="1" max="8" value="1">
+                </div>
+                <button type="button" data-action="run">Lancer la rotation</button>
+                <div class="progress-container">
+                    <div class="progress-bar"></div>
+                </div>
+                <p class="status">Pret</p>
+            </article>
 
-        <div id="progress-container">
-            <div id="progress-bar"></div>
-        </div>
-        <p id="status">Prêt</p>
-    </div>
+            <article class="motor" data-motor-id="2">
+                <h2>Moteur 2</h2>
+                <div class="field">
+                    <label for="nbr-2">Nombre de tours</label>
+                    <input type="number" id="nbr-2" min="1" max="8" value="1">
+                </div>
+                <button type="button" data-action="run">Lancer la rotation</button>
+                <div class="progress-container">
+                    <div class="progress-bar"></div>
+                </div>
+                <p class="status">Pret</p>
+            </article>
+
+            <article class="motor" data-motor-id="3">
+                <h2>Moteur 3</h2>
+                <div class="field">
+                    <label for="nbr-3">Nombre de tours</label>
+                    <input type="number" id="nbr-3" min="1" max="8" value="1">
+                </div>
+                <button type="button" data-action="run">Lancer la rotation</button>
+                <div class="progress-container">
+                    <div class="progress-bar"></div>
+                </div>
+                <p class="status">Pret</p>
+            </article>
+        </section>
+    </main>
 
     <script>
-        let timer;
         const msParTour = 2000;
-        const statusEl = document.getElementById('status');
-        const progressContainer = document.getElementById('progress-container');
-        const progressBar = document.getElementById('progress-bar');
-        const runButton = document.getElementById('btnRun');
-        const nbrInput = document.getElementById('nbr');
+        const timers = new Map();
+        const motorCards = Array.from(document.querySelectorAll('.motor'));
 
-        async function lancerMoteur() {
-            const nbr = Number.parseInt(nbrInput.value, 10);
+        function getMotorElements(card) {
+            return {
+                motorId: Number.parseInt(card.dataset.motorId, 10),
+                input: card.querySelector('input'),
+                button: card.querySelector('button'),
+                status: card.querySelector('.status'),
+                progressContainer: card.querySelector('.progress-container'),
+                progressBar: card.querySelector('.progress-bar')
+            };
+        }
+
+        function resetProgress(elements) {
+            elements.progressContainer.style.display = 'none';
+            elements.progressBar.style.width = '0%';
+            clearInterval(timers.get(elements.motorId));
+            timers.delete(elements.motorId);
+        }
+
+        function demarrerBarre(elements, totalMs) {
+            resetProgress(elements);
+            elements.progressContainer.style.display = 'block';
+            const start = Date.now();
+
+            const timer = setInterval(() => {
+                const diff = Date.now() - start;
+                const pourcent = (diff / totalMs) * 100;
+
+                if (pourcent >= 100) {
+                    elements.progressBar.style.width = '100%';
+                    clearInterval(timer);
+                    timers.delete(elements.motorId);
+                } else {
+                    elements.progressBar.style.width = pourcent + '%';
+                }
+            }, 100);
+
+            timers.set(elements.motorId, timer);
+        }
+
+        async function lancerMoteur(card) {
+            const elements = getMotorElements(card);
+            const nbr = Number.parseInt(elements.input.value, 10);
 
             if (!Number.isInteger(nbr) || nbr < 1 || nbr > 8) {
-                statusEl.innerText = "Entre une valeur entre 1 et 8";
+                elements.status.innerText = 'Entre une valeur entre 1 et 8';
                 return;
             }
-
-            const totalMs = nbr * msParTour;
 
             try {
                 const res = await fetch('/lancer', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ nbr: nbr })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ motorId: elements.motorId, nbr })
                 });
 
                 if (!res.ok) {
                     const data = await res.json().catch(() => ({}));
-                    statusEl.innerText = data.error || "Impossible de lancer le moteur";
+                    elements.status.innerText = data.error || 'Impossible de lancer ce moteur';
                     return;
                 }
 
-                statusEl.innerText = "Commande envoyee";
-                demarrerBarre(totalMs);
+                elements.status.innerText = 'Commande envoyee';
+                demarrerBarre(elements, nbr * msParTour);
             } catch (error) {
-                statusEl.innerText = "Serveur indisponible";
+                elements.status.innerText = 'Serveur indisponible';
             }
         }
 
-        function demarrerBarre(totalMs) {
-            progressContainer.style.display = 'block';
-            let start = Date.now();
+        function updateMotorCard(card, motor) {
+            const elements = getMotorElements(card);
+            const isRunning = motor.action === 'run';
 
-            timer = setInterval(() => {
-                let diff = Date.now() - start;
-                let pourcent = (diff / totalMs) * 100;
-                
-                if (pourcent >= 100) {
-                    progressBar.style.width = '100%';
-                    clearInterval(timer);
-                } else {
-                    progressBar.style.width = pourcent + '%';
-                }
-            }, 100);
+            elements.button.disabled = isRunning;
+            elements.input.disabled = isRunning;
+            elements.status.innerHTML = isRunning
+                ? `<strong>Moteur ${motor.id}</strong> en rotation...`
+                : `Pret pour le moteur ${motor.id}`;
+
+            if (isRunning && !timers.has(elements.motorId)) {
+                demarrerBarre(elements, motor.nbr * motor.ms_par_tour);
+            }
+
+            if (!isRunning) {
+                resetProgress(elements);
+            }
         }
 
-        // Vérification de l'état du serveur (Polling)
+        motorCards.forEach((card) => {
+            card.querySelector('button').addEventListener('click', () => lancerMoteur(card));
+        });
+
         setInterval(async () => {
             try {
                 const res = await fetch('/commande.json', { cache: 'no-store' });
                 const data = await res.json();
-                const isRunning = (data.action === "run");
+                const motors = Array.isArray(data.motors) ? data.motors : [];
 
-                runButton.disabled = isRunning;
-                nbrInput.disabled = isRunning;
-                statusEl.innerText = isRunning ? "Moteur en rotation..." : "Pret";
+                motorCards.forEach((card) => {
+                    const motorId = Number.parseInt(card.dataset.motorId, 10);
+                    const motor = motors.find((item) => item.id === motorId);
 
-                if (!isRunning) {
-                    progressContainer.style.display = 'none';
-                    progressBar.style.width = '0%';
-                    clearInterval(timer);
-                }
+                    if (motor) {
+                        updateMotorCard(card, motor);
+                    }
+                });
             } catch (error) {
-                runButton.disabled = true;
-                nbrInput.disabled = false;
-                statusEl.innerText = "Connexion au serveur perdue";
+                motorCards.forEach((card) => {
+                    const elements = getMotorElements(card);
+                    elements.button.disabled = true;
+                    elements.input.disabled = false;
+                    elements.status.innerText = 'Connexion au serveur perdue';
+                });
             }
         }, 1000);
     </script>
