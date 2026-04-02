@@ -5,20 +5,17 @@
 #include <ArduinoJson.h>
 
 // Configuration WiFi & Serveur
-const char* ssid = "VOTRE_SSID";
-const char* password = "VOTRE_PASSWORD";
-
-const bool useProductionServer = false;
-
-// Local: utiliser l'IP LAN du PC, jamais "localhost" ni "127.0.0.1"
-const char* localServerUrl = "http://192.168.1.10:3000";
-const char* productionServerUrl = "https://vending1.onrender.com";
+const char* ssid = "ton ssid";
+const char* password = "ton mot de passe";
+const bool useProductionServer = true;
+const char* localServerUrl = "http://10.48.94.45:3000";
+const char* productionServerUrl = "https://motors-7luf.onrender.com";
 const char* serverUrl = useProductionServer ? productionServerUrl : localServerUrl;
 
 // Pins L298N
 const int ENA = 14; 
-const int IN1 = 26;
-const int IN2 = 27;
+const int IN1 = 27;
+const int IN2 = 26;
 
 // Configuration PWM pour ESP32
 const int freq = 5000;
@@ -26,6 +23,8 @@ const int ledChannel = 0;
 const int resolution = 8;
 
 bool beginHttpClient(HTTPClient& http, WiFiClient& client, WiFiClientSecure& secureClient, const String& url) {
+  http.useHTTP10(true);
+
   if (url.startsWith("https://")) {
     secureClient.setInsecure();
     return http.begin(secureClient, url);
@@ -84,6 +83,8 @@ void notifierFin() {
   int httpResponseCode = http.POST("{}"); // Signale la fin au serveur
   if (httpResponseCode <= 0) {
     Serial.printf("Erreur POST /fini: %s\n", http.errorToString(httpResponseCode).c_str());
+  } else {
+    Serial.printf("POST /fini -> %d\n", httpResponseCode);
   }
   http.end();
 }
@@ -121,10 +122,13 @@ void loop() {
     int httpCode = http.GET();
     if (httpCode == 200) {
       StaticJsonDocument<200> doc;
-      DeserializationError error = deserializeJson(doc, http.getStream());
+      String payload = http.getString();
+      DeserializationError error = deserializeJson(doc, payload);
 
       if (error) {
         Serial.printf("JSON invalide: %s\n", error.c_str());
+        Serial.println("Reponse brute recue:");
+        Serial.println(payload);
         http.end();
         delay(1000);
         return;
@@ -137,7 +141,7 @@ void loop() {
         runMotor(ms, n, 255);
       }
     } else if (httpCode > 0) {
-      Serial.printf("Erreur GET /commande.json: %d\n", httpCode);
+      Serial.printf("GET /commande.json -> %d\n", httpCode);
     } else {
       Serial.printf("Connexion echouee: %s\n", http.errorToString(httpCode).c_str());
     }
