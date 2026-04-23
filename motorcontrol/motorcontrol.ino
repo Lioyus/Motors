@@ -119,7 +119,7 @@ void fetchCommands(MotorCommand* commands, size_t commandCount) {
   for (size_t index = 0; index < commandCount; index++) {
     commands[index].id = index + 1;
     commands[index].action = "idle";
-    commands[index].ms_par_tour = 2700;
+    commands[index].ms_par_tour = 2600;
     commands[index].nbr = 1;
   }
 
@@ -161,7 +161,7 @@ void fetchCommands(MotorCommand* commands, size_t commandCount) {
       int index = motorId - 1;
       commands[index].id = motorId;
       commands[index].action = motor["action"] | "idle";
-      commands[index].ms_par_tour = motor["ms_par_tour"] | 2700;
+      commands[index].ms_par_tour = motor["ms_par_tour"] | 2600;
       commands[index].nbr = motor["nbr"] | 1;
     }
   } else if (httpCode > 0) {
