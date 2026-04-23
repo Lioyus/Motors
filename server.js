@@ -19,7 +19,7 @@ function createMotorState(id) {
     return {
         id,
         action: 'idle',
-        ms_par_tour: 2000,
+        ms_par_tour: 2300,
         nbr: 1
     };
 }

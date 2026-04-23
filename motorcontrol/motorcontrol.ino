@@ -5,8 +5,8 @@
 #include <ArduinoJson.h>
 
 // Configuration WiFi & Serveur
-const char* ssid = "ton ssid";
-const char* password = "ton mot de passe";
+const char* ssid = "LYM_phone";
+const char* password = "lioyuss#10";
 const bool useProductionServer = true;
 const char* localServerUrl = "http://10.48.94.45:3000";
 const char* productionServerUrl = "https://motors-7luf.onrender.com";
@@ -119,7 +119,7 @@ void fetchCommands(MotorCommand* commands, size_t commandCount) {
   for (size_t index = 0; index < commandCount; index++) {
     commands[index].id = index + 1;
     commands[index].action = "idle";
-    commands[index].ms_par_tour = 2000;
+    commands[index].ms_par_tour = 2300;
     commands[index].nbr = 1;
   }
 
@@ -161,7 +161,7 @@ void fetchCommands(MotorCommand* commands, size_t commandCount) {
       int index = motorId - 1;
       commands[index].id = motorId;
       commands[index].action = motor["action"] | "idle";
-      commands[index].ms_par_tour = motor["ms_par_tour"] | 2000;
+      commands[index].ms_par_tour = motor["ms_par_tour"] | 2300;
       commands[index].nbr = motor["nbr"] | 1;
     }
   } else if (httpCode > 0) {
