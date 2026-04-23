@@ -5,8 +5,8 @@
 #include <ArduinoJson.h>
 
 // Configuration WiFi & Serveur
-const char* ssid = "Evolve Wifi Orange 2.4GHz";
-const char* password = "Evolve@123";
+const char* ssid = "ton_ssid_wifi";
+const char* password = "ton_mot_de_passe_wifi";
 const bool useProductionServer = true;
 const char* localServerUrl = "http://10.48.94.45:3000";
 const char* productionServerUrl = "https://motors-7luf.onrender.com";
@@ -119,7 +119,7 @@ void fetchCommands(MotorCommand* commands, size_t commandCount) {
   for (size_t index = 0; index < commandCount; index++) {
     commands[index].id = index + 1;
     commands[index].action = "idle";
-    commands[index].ms_par_tour = 2400;
+    commands[index].ms_par_tour = 2500;
     commands[index].nbr = 1;
   }
 
@@ -161,7 +161,7 @@ void fetchCommands(MotorCommand* commands, size_t commandCount) {
       int index = motorId - 1;
       commands[index].id = motorId;
       commands[index].action = motor["action"] | "idle";
-      commands[index].ms_par_tour = motor["ms_par_tour"] | 2400;
+      commands[index].ms_par_tour = motor["ms_par_tour"] | 2500;
       commands[index].nbr = motor["nbr"] | 1;
     }
   } else if (httpCode > 0) {
